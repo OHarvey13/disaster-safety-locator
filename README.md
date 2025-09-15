@@ -15,15 +15,15 @@ The goal is to analyze datasets related to healthcare availability, outcomes, an
 ---
 
 ## 📂 Project Structure
-healthcare-access-fairness/
-│── data/ # Raw and processed datasets
-│── notebooks/ # Jupyter notebooks for exploration and prototyping
-│── src/ # Source code (model, preprocessing, utils)
-│── models/ # Saved trained models
-│── results/ # Metrics, plots, and reports
-│── README.md # Project documentation
-│── requirements.txt # Python dependencies
-│── .gitignore # Ignored files
+healthcare-access-fairness/  
+│── data/                     # Raw and processed datasets  
+│── notebooks/                # Jupyter notebooks for exploration and prototyping   
+│── src/ # Source code (model, preprocessing, utils)  
+│── models/ # Saved trained models  
+│── results/ # Metrics, plots, and reports  
+│── README.md # Project documentation  
+│── requirements.txt # Python dependencies  
+│── .gitignore # Ignored files  
 
 
 ---
