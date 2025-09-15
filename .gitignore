@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+*.ipynb_checkpoints
+*.h5
+*.pt
+*.ckpt
+
+# Node / React
+node_modules/
+build/
+.next/
+dist/
+npm-debug.log
+yarn-error.log
+
+# Data
+data/raw/
+data/processed/
+
+# Misc
+.DS_Store
+*.log
