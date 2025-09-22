@@ -22,6 +22,9 @@ yarn-error.log
 data/raw/
 data/processed/
 
+# Models
+models/*
+
 # Misc
 .DS_Store
 *.log
