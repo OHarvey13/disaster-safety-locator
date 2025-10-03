@@ -33,12 +33,32 @@ disaster-safety-predictor/
 ---
 
 
-## 📊 Potential Datasets
-- **FEMA National Risk Index** – Community-level hazard risk & vulnerability.  
-- **FEMA National Shelter System (NSS)** – Locations and attributes of shelters.  
-- **NOAA / NHC** – Historical hurricane paths and storm surge data.  
-- **OpenStreetMap (OSM)** – Hospitals, roads, and shelter infrastructure.  
-- **Local / State Emergency Management Data** – Evacuation zones, flood zones.  
+## 📊 Datasets Used
+
+This project integrates multiple public datasets to build a **Hurricane Safety Locator**, focused on Wilmington, NC and surrounding coastal communities.
+
+- **[HURDAT2 Hurricane Database (NOAA)](https://www.aoml.noaa.gov/hrd/hurdat/hurdat2.html)**  
+  *Atlantic hurricane tracks and intensity data (1851–present). Provides storm paths, wind speeds, and pressure for modeling storm hazards.*
+
+- **[FEMA National Shelter System (NSS)](https://gis.fema.gov/arcgis/rest/services/NSS/FEMA_NSS/MapServer)**  
+  *Shelter locations and capacities. Used to identify safe locations for evacuation and measure shelter accessibility.*
+
+- **[FEMA National Risk Index (NRI)](https://hazards.fema.gov/nri/data-resources)**  
+  *Pre-computed county-level risk and resilience scores for natural hazards. Provides vulnerability and community resilience metrics.*
+
+- **(Optional) [FEMA Open Shelters API](https://gis.fema.gov/arcgis/rest/services/NSS/OpenShelters/FeatureServer)**  
+  *Real-time feed of currently open shelters. Useful for live demos, but not essential for model training.*
+  
+---
+
+## 🔄 Data Pipeline Overview
+
+1. **Download HURDAT2 (NOAA)** → Parse storm tracks & intensity.  
+2. **Download FEMA NRI CSV** → Extract county-level vulnerability scores.  
+3. **Query FEMA NSS API** → Get shelter locations & capacity.  
+4. **Merge datasets** on county/city (e.g., Wilmington / New Hanover County).  
+5. **Build models** → Predict storm impacts & locate safest evacuation options.  
+
 
 ---
 
