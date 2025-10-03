@@ -18,10 +18,6 @@ dist/
 npm-debug.log
 yarn-error.log
 
-# Data
-data/raw/
-data/processed/
-
 # Models
 models/*
 
