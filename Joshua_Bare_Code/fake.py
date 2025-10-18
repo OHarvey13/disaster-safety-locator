@@ -68,35 +68,36 @@ rf, FEATURE_COLS, TRAIN_MEDIANS = load_model_and_artifacts()
 # ----------------------------
 # Streamlit UI
 # ----------------------------
+# ----------------------------
+# Streamlit UI - Dramatic Hurricane Inputs
+# ----------------------------
 st.title("🌪 Wilmington Hurricane Impact Simulator")
-
 st.sidebar.header("Hurricane Builder")
-st.sidebar.write("Adjust parameters to generate a hurricane and predict its affected area.")
+st.sidebar.write("Select storm parameters to simulate a dramatic hurricane impact.")
 
-# Location (defaults to Wilmington, NC)
-st.sidebar.subheader("Storm Location & Time")
-center_lat = st.sidebar.number_input("Center Latitude (°N + / °S −)", value=34.2257, step=0.01, format="%.5f")
-center_lon = st.sidebar.number_input("Center Longitude (°E + / °W −)", value=-77.9447, step=0.01, format="%.5f")
+# Predefined location: Wilmington, NC
+center_lat, center_lon = 34.2257, -77.9447
 
-year  = st.sidebar.number_input("Year", value=2005, step=1)
-month = st.sidebar.slider("Month", 1, 12, 9)
-day   = st.sidebar.slider("Day", 1, 31, 20)
-hour  = st.sidebar.slider("Hour (0–23)", 0, 23, 12)
+st.sidebar.subheader("Storm Metrics (Dropdown Inputs)")
 
-st.sidebar.subheader("Storm Metrics")
-max_winds = st.sidebar.slider("Max Winds (kt)", 0, 200, 100)
-central_pressure = st.sidebar.slider("Central Pressure (mb)", 850, 1050, 960)
-rmw = st.sidebar.slider("Radius of Maximum Winds (nm)", 0, 150, 25)
-oci = st.sidebar.slider("OCI_mb (Outer Core Pressure) (mb)", 850, 1050, 1010)
-sshws = st.sidebar.slider("SSHWS (Category 0–5)", 0, 5, 2)
+# Dropdown menus for metrics
+max_winds = st.sidebar.selectbox("Max Winds (kt)", options=list(range(0, 201, 5)), index=20)
+central_pressure = st.sidebar.selectbox("Central Pressure (mb)", options=list(range(850, 1051, 5)), index=21)
+rmw = st.sidebar.selectbox("Radius of Maximum Winds (nm)", options=list(range(0, 151, 5)), index=5)
+oci = st.sidebar.selectbox("OCI_mb (Outer Core Pressure)", options=list(range(850, 1051, 5)), index=32)
+sshws = st.sidebar.selectbox("SSHWS (Category)", options=[0, 1, 2, 3, 4, 5], index=2)
 
-st.sidebar.caption("These inputs feed the trained RandomForest model. "
-                   "The predicted Size_nm is visualized as a circle radius.")
+# Predict button
+predict_button = st.sidebar.button("🔮 Predict Hurricane Impact")
 
 # ----------------------------
-# Build a single-row feature frame to match training schema
+# Prediction + Visualization
 # ----------------------------
-def build_features_for_model():
+# ----------------------------
+# Prediction + Visualization
+# ----------------------------
+if predict_button:
+    # Build features for model
     row = {
         "Lat": center_lat,
         "Long": center_lon,
@@ -105,90 +106,70 @@ def build_features_for_model():
         "RMW_nm": float(rmw),
         "OCI_mb": float(oci),
         "SSHWS": float(sshws),
-        "Year": int(year),
-        "Month": int(month),
-        "Day": int(day),
-        "Hour": int(hour),
-        # Derived features used in training:
         "Abs_Lat": abs(center_lat),
         "Wind_to_Pressure": (float(max_winds) / (float(central_pressure) + 1e-6)) if central_pressure else np.nan,
     }
-
-    # Align with training columns (order + missing handling)
     X_new = pd.DataFrame([{c: row.get(c, np.nan) for c in FEATURE_COLS}])
     X_new = X_new.apply(pd.to_numeric, errors="coerce").fillna(TRAIN_MEDIANS).fillna(0.0)
-    return X_new, row
 
-X_new, debug_row = build_features_for_model()
+    predicted_size = float(rf.predict(X_new)[0])
 
-# ----------------------------
-# Predict with your trained RF model
-# ----------------------------
-predicted_size = float(rf.predict(X_new)[0])  # Size in nautical miles (nm)
+    # Normal visualization: radius matches predicted size (in meters)
+    hurricane_df = pd.DataFrame({
+        'lon': [center_lon],
+        'lat': [center_lat],
+        'radius': [predicted_size * 1852.0],  # convert nm to meters
+        'color': [[128, 0, 128, 80]]
+    })
 
-# ----------------------------
-# Visualization
-# ----------------------------
-wilmington_center = (center_lon, center_lat)
+    address_layer = pdk.Layer(
+        "ColumnLayer",
+        data=df,
+        get_position='[lon, lat]',
+        get_elevation='elevation',
+        elevation_scale=1,
+        radius=50,
+        get_fill_color='color',
+        pickable=True,
+        auto_highlight=True
+    )
 
-# Hurricane circle (purple). Convert nm -> meters: 1 nm = 1852 m
-hurricane_df = pd.DataFrame({
-    'lon': [wilmington_center[0]],
-    'lat': [wilmington_center[1]],
-    'radius': [predicted_size * 1852.0],  # meters
-    'color': [[128, 0, 128, 80]]  # semi-transparent purple
-})
+    hurricane_layer = pdk.Layer(
+        "ScatterplotLayer",
+        data=hurricane_df,
+        get_position='[lon, lat]',
+        get_radius='radius',
+        get_fill_color='color',
+        stroked=True,
+        filled=True,
+        line_width_min_pixels=2,
+    )
 
-# Layers
-address_layer = pdk.Layer(
-    "ColumnLayer",
-    data=df,
-    get_position='[lon, lat]',
-    get_elevation='elevation',
-    elevation_scale=10,
-    radius=50,
-    get_fill_color='color',
-    pickable=True,
-    auto_highlight=True
-)
+    view_state = pdk.ViewState(
+        longitude=center_lon,
+        latitude=center_lat,
+        zoom=9,
+        pitch=45,
+    )
 
-hurricane_layer = pdk.Layer(
-    "ScatterplotLayer",
-    data=hurricane_df,
-    get_position='[lon, lat]',
-    get_radius='radius',
-    get_fill_color='color',
-    stroked=True,
-    filled=True,
-    line_width_min_pixels=2,
-)
+    tooltip = {
+        "html": "<b>Address:</b> {Full_Address}<br><b>Elevation:</b> {elevation} m"
+    }
 
-view_state = pdk.ViewState(
-    longitude=wilmington_center[0],
-    latitude=wilmington_center[1],
-    zoom=9,
-    pitch=45,
-)
+    st.pydeck_chart(pdk.Deck(
+        layers=[address_layer, hurricane_layer],
+        initial_view_state=view_state,
+        tooltip=tooltip
+    ))
 
-tooltip = {
-    "html": "<b>Address:</b> {Full_Address}<br><b>Elevation:</b> {elevation} m"
-}
+    st.markdown(f"""
+    ### 🌀 Predicted Hurricane Impact
+    **Predicted Size (radius):** {predicted_size:.2f} nm  
+    **Visualization:** Purple circle (scaled to predicted size)
+    """)
 
-st.pydeck_chart(pdk.Deck(
-    layers=[address_layer, hurricane_layer],
-    initial_view_state=view_state,
-    tooltip=tooltip
-))
+    with st.expander("🔧 Model feature values used for this prediction"):
+        st.dataframe(pd.DataFrame([row]))
 
-# ----------------------------
-# Results Display
-# ----------------------------
-st.markdown(f"""
-### 🌀 Predicted Hurricane Impact
-**Predicted Size (radius):** {predicted_size:.2f} nm  
-**Center:** ({center_lat:.4f}, {center_lon:.4f})  
-**Visualization:** Purple circle (radius = predicted size × 1852 meters)
-""")
-
-with st.expander("🔧 Model feature values used for this prediction"):
-    st.dataframe(pd.DataFrame([debug_row]))
+else:
+    st.info("👆 Select parameters from the dropdowns, then click **Predict Hurricane Impact** to simulate.")
