@@ -26,6 +26,7 @@ MEDIANS_PATH = ART_DIR / "/Users/dimitrimontgomery/Downloads/CSC 432/Demo/traini
 
 # Wilmington center
 CENTER_LAT, CENTER_LON = 34.2257, -77.9447
+NM_TO_M = 1852.0  # nautical miles → meters
 
 # ----------------------------------------------
 # Category presets (SSHWS → dropdown value sets)
@@ -180,7 +181,7 @@ oci = st.sidebar.selectbox("Outer Core Pressure Δ (OCI_mb)", options=opts["OCI_
 
 predict_button = st.sidebar.button("Predict Hurricane Impact")
 
-# Base addresses layer (always shown)
+# Base addresses layer (always shown) — pickable for tooltip
 address_layer = pdk.Layer(
     "ScatterplotLayer",
     data=df,
@@ -188,12 +189,14 @@ address_layer = pdk.Layer(
     get_radius=30,              # small for perf
     get_fill_color="color",
     pickable=True,
+    auto_highlight=True,
 )
 layers = [address_layer]       # no circle until Predict
 
 # Only compute model + circle AFTER Predict, and only if model is available
 rf, FEATURE_COLS, TRAIN_MEDIANS = load_model_and_artifacts()
 predicted_size_nm = None
+radius_nm_used = None
 
 if predict_button:
     if rf is None or not FEATURE_COLS:
@@ -216,10 +219,15 @@ if predict_button:
 
         try:
             predicted_size_nm = float(rf.predict(X_new)[0])
+
+            # --- CHANGE #1: USE HALF (radius) ---
+            radius_nm_used = predicted_size_nm / 2.0
+            radius_m = radius_nm_used * NM_TO_M
+
             hurricane_df = pd.DataFrame({
                 "lon": [CENTER_LON],
                 "lat": [CENTER_LAT],
-                "radius_m": [predicted_size_nm * 1852.0],  # nm → meters
+                "radius_m": [radius_m],         # meters for ScatterplotLayer size
                 "color": [[128, 0, 128, 80]],
             })
             hurricane_layer = pdk.Layer(
@@ -236,20 +244,27 @@ if predict_button:
         except Exception as e:
             st.error(f"Model failed to predict. Check your artifacts and scikit-learn version.\n\n**Error:** {e}")
 
-# View state + render
+# View state + render (with tooltip showing elevation)
 view_state = pdk.ViewState(
     longitude=CENTER_LON,
     latitude=CENTER_LAT,
     zoom=10,
     pitch=45,
 )
-st.pydeck_chart(pdk.Deck(layers=layers, initial_view_state=view_state))
+
+# --- CHANGE #2: Add tooltip for elevation on address dots ---
+tooltip = {
+    "html": "<b>Address:</b> {Full_Address}<br/><b>Elevation (m):</b> {elevation}",
+    "style": {"backgroundColor": "white", "color": "black"}
+}
+
+st.pydeck_chart(pdk.Deck(layers=layers, initial_view_state=view_state, tooltip=tooltip))
 
 # Info panel
 if predicted_size_nm is not None:
     st.markdown(
-        f"### Predicted Hurricane Radius: **{predicted_size_nm:.2f} nm**  "
-        "*(purple circle reflects the model output)*"
+        f"### Predicted Hurricane **Radius**: **{radius_nm_used:.2f} nm**  \n"
+        f"*(purple circle shows radius = ½ × model size; model size was {predicted_size_nm:.2f} nm)*"
     )
 else:
     st.info("Pick a **category** and inputs in the sidebar, then click **Predict Hurricane Impact** to draw the radius.")
@@ -260,20 +275,3 @@ with st.expander("Notes / Performance"):
         "- If you see scikit-learn version warnings when loading the model, either pin the version used to save it "
         '(`pip install "scikit-learn==1.6.1"`) **or** re-save the model with your current version.'
     )
-
-
-
-
-
-
-
-
-
-gdb_path = "/Users/dimitrimontgomery/Downloads/CSC 432/Demo/NEWHANOVER.gdb"
-dem_path = "/Users/dimitrimontgomery/Downloads/CSC 432/Demo/newhanover-DEM03/newhanover-DEM03.tif"
-
-# Artifacts (kept exactly as you had them; yes these are absolute paths joined to Path(".")) 
-ART_DIR = Path(".")
-MODEL_PATH = ART_DIR / "/Users/dimitrimontgomery/Downloads/CSC 432/Demo/hurricane_rf_model.joblib"
-FEAT_PATH = ART_DIR / "/Users/dimitrimontgomery/Downloads/CSC 432/Demo/feature_columns.txt"
-MEDIANS_PATH = ART_DIR / "/Users/dimitrimontgomery/Downloads/CSC 432/Demo/training_medians.json"
