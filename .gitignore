@@ -1,0 +1,17 @@
+# Virtual environment
+.venv/
+
+# Geospatial data and large files
+*.tif
+*.tiff
+*.joblib
+*.json
+*.gdb/
+newhanover-DEM03/
+NEWHANOVER.gdb/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# System
+.DS_Store

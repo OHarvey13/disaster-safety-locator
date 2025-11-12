@@ -1,0 +1,13 @@
+Lat
+Long
+Max_Winds_kt
+SSHWS
+RMW_nm
+Central_Pressure
+OCI_mb
+Year
+Month
+Day
+Hour
+Abs_Lat
+Wind_to_Pressure
